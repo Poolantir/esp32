@@ -11,7 +11,7 @@
 **ESP32 Pins:** 
 - SG90 Red Wire --> + Terminal
 - SG90 Orange Wire --> - Terminal
-- SG90 Brown Wire --> ESP32 GPIO 13
+- SG90 Brown Wire --> ESP32 GPIO 14
 
 **Description:**
 

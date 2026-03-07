@@ -12,8 +12,8 @@
 **ESP32 Pins:** 
 - ToF VCC --> + Terminal
 - ToF GND --> - Terminal
-- ToF SCL --> ESP32 D21
-- ToF SDA --> ESP32 D22
+- ToF SCL --> ESP32 D22
+- ToF SDA --> ESP32 D21
 
 _Unused ToF Pins:_
 - ToF GPIO1
