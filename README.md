@@ -1,4 +1,4 @@
-# poolantir-esp32-sensing-module
+# Poolantir ESP32 Bathroom Sensing Module
 
 ## Iteration 1:
 This code is for the ESP32 sensing module. The sensing module is used for 3 purposes:
