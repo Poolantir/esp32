@@ -1,6 +1,6 @@
 /**
  * @file poolantir.cpp (main code)
- * @brief Poolantir ESP32 sensing module - Iteration 1
+ * @brief Poolantir ESP32 sensing module
  *
  * Detects user in "pissing range" via ToF sensor, drives status LEDs (in-use + WiFi/Bluetooth),
  * and controls a servo to simulate pissing (move in, pause, move out).
@@ -8,7 +8,7 @@
 
 #include <Arduino.h>
 #include <Wire.h>
-
+#include "clock.h"
 
 // /* ---------------------------------------------------------------------------/
 //  * Pin assignments (from /peripherals directory)
@@ -118,7 +118,29 @@ void setup() {
 }
 
 void loop() {
-  Serial.println("Main loop");
+  static bool startedTimedTask = false;
+  static bool timedTaskDone = false;
+  static ClockTimer timedTimer;
+
+  if (!startedTimedTask) {
+    timedTimer.start();
+    startedTimedTask = true;
+    Serial.println("[Clock] Started 10s timed task");
+  }
+
+  if (!timedTaskDone) {
+    // Example: do some repeated work for 10 seconds, then continue.
+    Serial.println("[Clock] Timed task tick");
+    delay(1000);
+
+    if (timedTimer.expired(10000)) {
+      timedTaskDone = true;
+      Serial.println("[Clock] Timed task complete; continuing main loop");
+    }
+    return;
+  }
+
+  Serial.println("Main loop continues");
   delay(1000);
   // bool user_in_range = isPissing();
 
