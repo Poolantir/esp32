@@ -2,17 +2,24 @@
 #include <Wire.h>
 #include <VL53L0X.h>
 
+
 // ----------------------------- //
 //         PIN ASSIGNMENTS       //
 // ----------------------------- //
+
 // ESP32 I2C: SDA=21, SCL=22 (connect 21→ToF SDA, 22→ToF SCL)
 #define TOF_SDA 21
 #define TOF_SCL 22
+
+// testing purposes
 #define LED_a 4     // GPIO 4
 #define LED_b 16    // GPIO 16
 #define LED_c 17    // GPIO 17
 
-VL53L0X tof;
+///////////////////
+//    TOF OBJ   //
+///////////////////
+VL53L0X sensor;
 
 void initLeds() {
   pinMode(LED_a, OUTPUT);
@@ -30,47 +37,27 @@ void initLeds() {
 }
 void setup() {
   Serial.begin(115200);
-  delay(200);  // Let UART stabilize (helps avoid garbled first lines)
-  Serial.println("\n\n=== ToF test @ 115200 ===");
+  Wire.begin();
   initLeds();
-  Wire.begin(TOF_SDA, TOF_SCL);
 
-  tof.setTimeout(500);
-
-  if (!tof.init()) {
-    Serial.println("[ERROR] ToF sensor not found. Wire 21→SDA, 22→SCL");
+  sensor.setTimeout(500);
+  if (!sensor.init())
+  {
+    Serial.println("failure initializing the ToF sensuh");
     while (1) {}
   }
 
-  tof.startContinuous();
+  // start the continous mode (there is continuous and single options)
+  sensor.startContinuous();
 }
 
 void loop() {
-  uint16_t mm = tof.readRangeContinuousMillimeters();
-  if (tof.timeoutOccurred()) {
-    Serial.println("(timeout)");
-  }
-  else {
-    Serial.print("distance: ");
-    Serial.print(mm);
-    Serial.println(" mm");
-
-    if (mm < 50) {
-      digitalWrite(LED_a, HIGH);
-    } else {
-      digitalWrite(LED_a, LOW);
-    }
-    if (mm < 100) {
-      digitalWrite(LED_b, HIGH);
-    } else {
-      digitalWrite(LED_b, LOW);
-    }
-    if (mm < 150) {
-      digitalWrite(LED_c, HIGH);
-    } else {
-      digitalWrite(LED_c, LOW);
-    }
+  Serial.print("Sensor Reading: ");
+  Serial.print(sensor.readRangeContinuousMillimeters());
+  if (sensor.timeoutOccurred())
+  {
+    Serial.print("[timeout occurred]"); 
   }
 
-  delay(500);  // one reading per second so serial doesn't flood
+  Serial.println();
 }
