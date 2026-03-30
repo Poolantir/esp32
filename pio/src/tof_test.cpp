@@ -43,7 +43,7 @@ void setup() {
   sensor.setTimeout(500);
   if (!sensor.init())
   {
-    Serial.println("failure initializing the ToF sensuh");
+    Serial.println("failure initializing the ToF sensor");
     while (1) {}
   }
 
