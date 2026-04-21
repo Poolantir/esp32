@@ -2,62 +2,86 @@
 #include <Wire.h>
 #include <VL53L0X.h>
 
+#define LED_R 27
+#define LED_G 26
+#define LED_B 25
 
-// ----------------------------- //
-//         PIN ASSIGNMENTS       //
-// ----------------------------- //
-
-// ESP32 I2C: SDA=21, SCL=22 (connect 21→ToF SDA, 22→ToF SCL)
 #define TOF_SDA 21
 #define TOF_SCL 22
 
-// testing purposes
-#define LED_a 4     // GPIO 4
-#define LED_b 16    // GPIO 16
-#define LED_c 17    // GPIO 17
+#define PISSING_RANGE_MM 60
 
-///////////////////
-//    TOF OBJ   //
-///////////////////
 VL53L0X sensor;
 
-void initLeds() {
-  pinMode(LED_a, OUTPUT);
-  pinMode(LED_b, OUTPUT);
-  pinMode(LED_c, OUTPUT);
-  digitalWrite(LED_a, HIGH);
-  digitalWrite(LED_b, HIGH);
-  digitalWrite(LED_c, HIGH);
-  Serial.println("LEDs initialized");
-
-  delay(5000);
-  digitalWrite(LED_a, LOW);
-  digitalWrite(LED_b, LOW);
-  digitalWrite(LED_c, LOW);
-}
 void setup() {
   Serial.begin(115200);
-  Wire.begin();
-  initLeds();
+  pinMode(LED_R, OUTPUT);
+  pinMode(LED_G, OUTPUT);
+  pinMode(LED_B, OUTPUT);
+  delay(2000);
+  Wire.begin(TOF_SDA, TOF_SCL);
+  Wire.setClock(100000);
+
+  // FLASH SEQUENCE
+  digitalWrite(LED_R, HIGH);
+  digitalWrite(LED_G, LOW);
+  digitalWrite(LED_B, LOW);
+  Serial.println("RED");
+  delay(1000);
+  digitalWrite(LED_R, LOW);
+  digitalWrite(LED_G, HIGH);
+  digitalWrite(LED_B, LOW);
+  Serial.println("GREEN");
+  delay(1000);
+  digitalWrite(LED_R, LOW);
+  digitalWrite(LED_G, LOW);
+  digitalWrite(LED_B, HIGH);
+  Serial.println("BLUE");
+  delay(1000);
+
+  // TURN OFF
+  digitalWrite(LED_R, LOW);
+  digitalWrite(LED_G, LOW);
+  digitalWrite(LED_B, LOW);
 
   sensor.setTimeout(500);
-  if (!sensor.init())
-  {
-    Serial.println("failure initializing the ToF sensor");
+  bool initialized = false;
+  for (int attempt = 1; attempt <= 5; attempt++) {
+    Serial.printf("ToF init attempt %d/5...\n", attempt);
+    if (sensor.init()) {
+      initialized = true;
+      break;
+    }
+    Serial.println("  failed, retrying...");
+    delay(500);
+  }
+  if (!initialized) {
+    Serial.println("failure initializing the ToF sensor after 5 attempts");
+    digitalWrite(LED_R, HIGH);
     while (1) {}
   }
-
-  // start the continous mode (there is continuous and single options)
   sensor.startContinuous();
+  Serial.println("ToF test started");
 }
 
 void loop() {
-  Serial.print("Sensor Reading: ");
-  Serial.print(sensor.readRangeContinuousMillimeters());
-  if (sensor.timeoutOccurred())
-  {
-    Serial.print("[timeout occurred]"); 
-  }
+  uint16_t mm = sensor.readRangeContinuousMillimeters();
+  bool timeout = sensor.timeoutOccurred();
+  bool inRange = !timeout && mm > 0 && mm <= PISSING_RANGE_MM;
 
+  Serial.print("Distance: ");
+  Serial.print(mm);
+  Serial.print(" mm");
+  if (timeout) Serial.print(" [timeout]");
+  if (inRange) Serial.print(" [IN RANGE]");
   Serial.println();
+
+  if (inRange) {
+    digitalWrite(LED_R, LOW);
+    digitalWrite(LED_G, HIGH);
+  } else {
+    digitalWrite(LED_R, HIGH);
+    digitalWrite(LED_G, LOW);
+  }
+  digitalWrite(LED_B, LOW);
 }
