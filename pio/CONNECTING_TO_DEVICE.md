@@ -67,6 +67,34 @@ After you see **Transmission mode**, type messages interactively; the ESP32 seri
 - **Permission errors / no devices** — grant **Bluetooth** to the app running Python (Terminal vs IDE integrated terminal).
 - **Multiple nodes in range** — use **`--id`** or **`--address`** so the target is unambiguous.
 
-### 5. GUI alternative
+### 5. Dummy terminal mode (test commands)
+
+If the ESP32 is flashed with the **`poolantir_dummy_terminal`** environment (see `FLASHING_NODES.md`), the BLE terminal supports four test commands:
+
+```
+Actions for node N:
+  1) Echo          — send a message, ESP32 echoes it back
+  2) Move servo    — REST / MAX / specific degree (0-180)
+  3) Flash LED     — flash R, G, or B
+  4) Simulate user — enqueue pee(1) / poo(2) sequence on ESP32
+```
+
+Example payloads sent over BLE:
+
+| Action         | Payload example                |
+|----------------|-------------------------------|
+| Echo           | `ECHO hello world`            |
+| Servo to 90°   | `SERVO 90`                    |
+| Servo to rest   | `SERVO REST`                  |
+| Flash red LED  | `LED R`                       |
+| Simulate users | `SIM 3 {1,2,1}`              |
+
+For **Simulate user**, the ESP32 consumes each element sequentially:
+- `1` (pee): servo at max for 2 s, then return to rest, then 3 s pause.
+- `2` (poo): servo at max for 4 s, then return to rest, then 3 s pause.
+
+The ESP32 streams timestamped status messages back as BLE notifications, visible in the terminal.
+
+### 6. GUI alternative
 
 If you prefer a graphical client, use **LightBlue** from the Mac App Store: scan → connect to **`poolantir-node-<id>`** → open the service above → enable notifications on the characteristic → write a value.

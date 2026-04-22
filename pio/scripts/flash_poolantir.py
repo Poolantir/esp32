@@ -2,16 +2,27 @@
 """Flash poolantir firmware; pass --id to set the BLE device suffix (stored in NVS on boot).
 
 Example:
-  python3 scripts/flash_poolantir.py --id kitchen-1
-  python3 scripts/flash_poolantir.py --id 7 -- pio run -e poolantir_simulation -t upload -t monitor
+  python3 scripts/flash_poolantir.py --id 1
+  python3 scripts/flash_poolantir.py --id 1 --dummy --monitor
 """
 
 from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
+
+
+def _find_pio() -> str:
+    found = shutil.which("pio")
+    if found:
+        return found
+    home_bin = os.path.expanduser("~/.platformio/penv/bin/pio")
+    if os.path.isfile(home_bin):
+        return home_bin
+    return "pio"
 
 
 def main() -> int:
@@ -22,23 +33,26 @@ def main() -> int:
         help="Node id suffix; advertised name is poolantir-node-<id> (default: 0 or env).",
     )
     parser.add_argument(
-        "pio_args",
-        nargs=argparse.REMAINDER,
-        help="Extra args after '--' are passed to pio (default: run -e poolantir_simulation -t upload).",
+        "--dummy",
+        action="store_true",
+        help="Flash the dummy terminal firmware (poolantir_dummy_terminal) instead of production.",
+    )
+    parser.add_argument(
+        "--monitor",
+        action="store_true",
+        help="Open the serial monitor after uploading.",
     )
     args = parser.parse_args()
 
     env = os.environ.copy()
     env["POOLANTIR_NODE_ID"] = args.id
 
-    remainder = args.pio_args
-    if remainder and remainder[0] == "--":
-        remainder = remainder[1:]
+    pio = _find_pio()
+    pio_env = "poolantir_dummy_terminal" if args.dummy else "poolantir_simulation"
 
-    if remainder:
-        cmd = ["pio", *remainder]
-    else:
-        cmd = ["pio", "run", "-e", "poolantir_simulation", "-t", "upload"]
+    cmd = [pio, "run", "-e", pio_env, "-t", "upload"]
+    if args.monitor:
+        cmd += ["-t", "monitor"]
 
     return subprocess.call(cmd, env=env)
 
