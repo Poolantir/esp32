@@ -49,12 +49,18 @@ def main() -> int:
 
     pio = _find_pio()
     pio_env = "poolantir_dummy_terminal" if args.dummy else "poolantir_simulation"
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    pio_ini = os.path.join(project_root, "platformio.ini")
+    if not os.path.isfile(pio_ini):
+        print(f"Could not find platformio.ini at: {pio_ini}", file=sys.stderr)
+        return 1
 
     cmd = [pio, "run", "-e", pio_env, "-t", "upload"]
     if args.monitor:
         cmd += ["-t", "monitor"]
 
-    return subprocess.call(cmd, env=env)
+    return subprocess.call(cmd, env=env, cwd=project_root)
 
 
 if __name__ == "__main__":
