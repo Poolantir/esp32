@@ -1,3 +1,8 @@
+# Poolantir Node Device
+Platform IO (VSCODE extension) is used to program and flash the ESP32 nodes for the Poolantir Simulation. 
+
+Poolantir Simulation code is within [src/main.cpp](/src/main.cpp)
+
 ### Flashing Nodes
 To flash a Poolantir node, copy one of the following commands. 
 This writes to the ESP32's persistent storage so that on power-up, the node's BLE name is unique.
