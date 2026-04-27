@@ -38,11 +38,14 @@ static void logParsed(const String& summary) {
 //      TX HELPERS        //
 ////////////////////////////
 
-static void sendModeAck(const String& mode) {
+static void sendModeAck(const String& mode, bool ok, const String& error = "") {
   JsonDocument doc;
   doc["command"] = "MODE";
   doc["type"]    = "ACK";
-  doc["action"]  = mode;
+  JsonObject action = doc["action"].to<JsonObject>();
+  action["mode"] = mode;
+  action["ok"]   = ok;
+  if (error.length()) action["error"] = error;
   String msg;
   serializeJson(doc, msg);
   bleSendMessage(msg);
@@ -92,6 +95,7 @@ static void setMode(const String& action) {
   else if (v == "SIM")  next = MODE_SIM;
   else {
     Serial.printf("[MODE] invalid: \"%s\"\n", action.c_str());
+    sendModeAck(v, false, "invalid_mode");
     return;
   }
 
@@ -99,7 +103,7 @@ static void setMode(const String& action) {
   if (next == MODE_TEST) enterTestMode();
   else                   enterSimMode();
 
-  sendModeAck(v);
+  sendModeAck(v, true);
   Serial.printf("[MODE] now %s\n", modeName(gMode));
 }
 
@@ -207,28 +211,30 @@ static void handleCommand(const String& raw) {
     return;
   }
 
-  // ---- SIM: only in MODE_SIM ----
+  // ---- SIM ----
   if (command == "SIM") {
     String id = doc["id"] | "";
     String summary = String("SIM ") + type + " id=" + id;
-
-    if (gMode != MODE_SIM) {
-      logParsed(summary + " (ignored, mode=" + modeName(gMode) + ")");
-      return;
-    }
     logParsed(summary);
 
     if (type == "NEW") {
-      if (doc["action"].isNull()) { logParsed("SIM NEW <missing action>"); return; }
-      float duration = 0;
-      if (doc["action"].is<JsonObject>()) {
-        duration = doc["action"]["duration_s"].as<float>();
-      } else {
-        duration = doc["action"].as<float>();
+      if (gMode != MODE_SIM) {
+        sendSimAck(id, false, "wrong_mode");
+        return;
       }
-      if (duration <= 0) { logParsed("SIM NEW invalid duration"); return; }
+      float duration = 0;
+      if (!doc["action"].isNull()) {
+        if (doc["action"].is<JsonObject>())
+          duration = doc["action"]["duration_s"].as<float>();
+        else
+          duration = doc["action"].as<float>();
+      }
       simNewUser(id, duration);
     } else if (type == "CONTROL") {
+      if (gMode != MODE_SIM) {
+        logParsed(summary + " (ignored, mode=" + modeName(gMode) + ")");
+        return;
+      }
       String action = doc["action"] | "";
       action.toUpperCase();
       if (action == "PAUSE")     simPause();

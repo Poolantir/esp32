@@ -7,3 +7,4 @@ void simModeTick();
 void simNewUser(const String& id, float durationS);
 void simPause();
 void simPlay();
+void sendSimAck(const String& id, bool ok, const String& error = "");

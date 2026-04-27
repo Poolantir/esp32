@@ -17,12 +17,26 @@ static ClockTimer sHoldTimer;
 static bool     sPaused          = false;
 static uint32_t sRemainingHoldMs = 0;
 
+void sendSimAck(const String& id, bool ok, const String& error) {
+  JsonDocument doc;
+  doc["command"] = "SIM";
+  doc["id"]      = id;
+  doc["type"]    = "ACK";
+  JsonObject action = doc["action"].to<JsonObject>();
+  action["ok"] = ok;
+  if (error.length()) action["error"] = error;
+  String msg;
+  serializeJson(doc, msg);
+  bleSendMessage(msg);
+}
+
 static void sendSimComplete(const String& id, bool success) {
   JsonDocument doc;
   doc["command"] = "SIM";
   doc["id"]      = id;
   doc["type"]    = "COMPLETE";
-  doc["action"]  = success;
+  JsonObject action = doc["action"].to<JsonObject>();
+  action["success"] = success;
   String msg;
   serializeJson(doc, msg);
   bleSendMessage(msg);
@@ -42,10 +56,19 @@ void enterSimMode() {
 
 void simNewUser(const String& id, float durationS) {
   if (sState != SIM_IDLE) {
-    Serial.printf("[SIM] busy with user %s, ignoring new user %s\n",
+    Serial.printf("[SIM] busy with user %s, rejecting %s\n",
                   sUserId.c_str(), id.c_str());
+    sendSimAck(id, false, "busy");
     return;
   }
+  if (durationS <= 0) {
+    Serial.printf("[SIM] invalid duration %.1f for user %s\n", durationS, id.c_str());
+    sendSimAck(id, false, "invalid_duration");
+    return;
+  }
+
+  sendSimAck(id, true);
+
   sUserId     = id;
   sDurationMs = (uint32_t)(durationS * 1000.0f);
   servoWriteImmediate(SERVO_MAX_DEG);
