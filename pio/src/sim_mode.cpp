@@ -7,7 +7,7 @@
 #include "clock.h"
 #include <ArduinoJson.h>
 
-enum SimState { SIM_IDLE, SIM_MOVING_MAX, SIM_HOLDING };
+enum SimState { SIM_IDLE, SIM_HOLDING };
 
 static SimState sState     = SIM_IDLE;
 static String   sUserId;
@@ -15,9 +15,7 @@ static uint32_t sDurationMs = 0;
 static ClockTimer sHoldTimer;
 
 static bool     sPaused          = false;
-static SimState sSavedState      = SIM_IDLE;
 static uint32_t sRemainingHoldMs = 0;
-static bool     sServoWasMoving  = false;
 
 static void sendSimComplete(const String& id, bool success) {
   JsonDocument doc;
@@ -32,7 +30,8 @@ static void sendSimComplete(const String& id, bool success) {
 
 void enterSimMode() {
   servoWriteImmediate(SERVO_REST_DEG);
-  ledSetGreen();
+  if (bleIsConnected()) ledSetGreen();
+  else                  ledAllOff();
   tofStopContinuous();
   sState      = SIM_IDLE;
   sUserId     = "";
@@ -49,23 +48,21 @@ void simNewUser(const String& id, float durationS) {
   }
   sUserId     = id;
   sDurationMs = (uint32_t)(durationS * 1000.0f);
-  servoMoveAnimated(SERVO_MAX_DEG);
-  sState = SIM_MOVING_MAX;
+  servoWriteImmediate(SERVO_MAX_DEG);
+  ledSetRed();
+  sHoldTimer.start();
+  sState = SIM_HOLDING;
   Serial.printf("[SIM] new user id=%s duration=%.1fs\n", id.c_str(), durationS);
 }
 
 void simPause() {
   if (sPaused || sState == SIM_IDLE) return;
-  sPaused     = true;
-  sSavedState = sState;
+  sPaused = true;
 
   if (sState == SIM_HOLDING) {
     uint32_t elapsed = sHoldTimer.elapsedMs();
     sRemainingHoldMs = (elapsed >= sDurationMs) ? 0 : (sDurationMs - elapsed);
   }
-
-  sServoWasMoving = servoIsMoving();
-  if (sServoWasMoving) servoPause();
 
   Serial.println("[SIM] paused");
 }
@@ -74,12 +71,10 @@ void simPlay() {
   if (!sPaused) return;
   sPaused = false;
 
-  if (sSavedState == SIM_HOLDING) {
+  if (sState == SIM_HOLDING) {
     sDurationMs = sRemainingHoldMs;
     sHoldTimer.start();
   }
-
-  if (sServoWasMoving) servoResume();
 
   Serial.println("[SIM] resumed");
 }
@@ -92,18 +87,6 @@ void simModeTick() {
     case SIM_IDLE:
       break;
 
-    // Wait for animated servo move to finish, then turn LED RED.
-    case SIM_MOVING_MAX:
-      if (!servoIsMoving()) {
-        ledSetRed();
-        sHoldTimer.start();
-        sState = SIM_HOLDING;
-        Serial.printf("[SIM] servo at MAX, holding for %lu ms\n",
-                      (unsigned long)sDurationMs);
-      }
-      break;
-
-    // Hold at MAX for the requested duration, then snap to REST immediately.
     case SIM_HOLDING:
       if (sHoldTimer.expired(sDurationMs)) {
         servoWriteImmediate(SERVO_REST_DEG);

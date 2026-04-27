@@ -3,10 +3,11 @@
 #include "servo.h"
 #include "led.h"
 #include "tof.h"
+#include "ble.h"
 #include "clock.h"
 #include <deque>
 
-enum QueueState { Q_IDLE, Q_MOVING_MAX, Q_HOLDING, Q_MOVING_REST, Q_GAP };
+enum QueueState { Q_IDLE, Q_HOLDING, Q_GAP };
 enum LedTrack   { TL_NONE, TL_BLUE, TL_GREEN, TL_RED };
 
 static QueueState sQueueState = Q_IDLE;
@@ -24,32 +25,20 @@ static void queueTick() {
         int val = sQueue.front();
         sQueue.pop_front();
         sQueueHoldMs = (uint32_t)val * 1000UL;
-        servoMoveAnimated(SERVO_MAX_DEG);
-        sQueueState = Q_MOVING_MAX;
+        servoWriteImmediate(SERVO_MAX_DEG);
+        sQueueTimer.start();
+        sQueueState = Q_HOLDING;
         Serial.printf("[TEST QUEUE] -> MAX, hold %lu ms (%d left)\n",
                       (unsigned long)sQueueHoldMs, (int)sQueue.size());
       }
       break;
 
-    case Q_MOVING_MAX:
-      if (!servoIsMoving()) {
-        sQueueTimer.start();
-        sQueueState = Q_HOLDING;
-      }
-      break;
-
     case Q_HOLDING:
       if (sQueueTimer.expired(sQueueHoldMs)) {
-        servoMoveAnimated(SERVO_REST_DEG);
-        sQueueState = Q_MOVING_REST;
-        Serial.println("[TEST QUEUE] hold done, -> REST");
-      }
-      break;
-
-    case Q_MOVING_REST:
-      if (!servoIsMoving()) {
+        servoWriteImmediate(SERVO_REST_DEG);
         sQueueTimer.start();
         sQueueState = Q_GAP;
+        Serial.println("[TEST QUEUE] hold done, -> REST");
       }
       break;
 
@@ -63,22 +52,25 @@ static void queueTick() {
 
 void enterTestMode() {
   servoWriteImmediate(SERVO_REST_DEG);
-  ledSetBlue();
+  if (bleIsConnected()) { ledSetBlue(); sPrevLed = TL_BLUE; }
+  else                  { ledAllOff();  sPrevLed = TL_NONE; }
   tofStartContinuous();
   sQueueState = Q_IDLE;
   sQueue.clear();
-  sPrevLed = TL_BLUE;
   Serial.println("[TEST] entered TEST mode");
 }
 
 void testModeTick() {
   queueTick();
 
+  if (!bleIsConnected()) {
+    if (sPrevLed != TL_NONE) { ledAllOff(); sPrevLed = TL_NONE; }
+    return;
+  }
+
   bool inRange     = tofIsInRange();
   bool queueActive = (sQueueState != Q_IDLE || !sQueue.empty());
 
-  // Normal TEST: base BLUE, in-range RED.
-  // Queue TEST:  base GREEN, in-range RED (per COMMANDS.md queue spec).
   LedTrack desired;
   if (inRange)            desired = TL_RED;
   else if (queueActive)   desired = TL_GREEN;
@@ -112,7 +104,7 @@ void testServoCmd(const String& action) {
     return;
   }
 
-  servoMoveAnimated(deg);
+  servoWriteImmediate(deg);
   Serial.printf("[TEST SERVO] -> %s (%d deg)\n", a.c_str(), deg);
 }
 

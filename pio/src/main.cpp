@@ -161,10 +161,8 @@ static void handleCommand(const String& raw) {
 
     if (type == "IN_RANGE") {
       sendGetResponse("IN_RANGE", tofGetInRangeMm());
-    } else if (type == "SERVO_RAMP") {
-      sendGetResponse("SERVO_RAMP", (int)servoGetRampMs());
     } else {
-      logParsed("GET unknown type (expected IN_RANGE or SERVO_RAMP)");
+      logParsed("GET unknown type (expected IN_RANGE)");
     }
     return;
   }
@@ -178,11 +176,8 @@ static void handleCommand(const String& raw) {
     if (type == "IN_RANGE") {
       tofSetInRangeMm(value);
       sendFlashAck("IN_RANGE", tofGetInRangeMm());
-    } else if (type == "SERVO_RAMP") {
-      servoSetRampMs((uint32_t)value);
-      sendFlashAck("SERVO_RAMP", (int)servoGetRampMs());
     } else {
-      logParsed("FLASH unknown type (expected IN_RANGE or SERVO_RAMP)");
+      logParsed("FLASH unknown type (expected IN_RANGE)");
     }
     return;
   }
@@ -248,6 +243,19 @@ static void handleCommand(const String& raw) {
   logParsed(String("<unknown command: \"") + command + "\">");
 }
 
+////////////////////////////
+//  BLE CONNECTION HOOK   //
+////////////////////////////
+
+static void onBleConnection(bool connected) {
+  if (connected) {
+    if (gMode == MODE_TEST) ledSetBlue();
+    else                    ledSetGreen();
+  } else {
+    ledAllOff();
+  }
+}
+
 /////////////////
 //    SETUP    //
 /////////////////
@@ -259,6 +267,7 @@ void setup() {
   servoInit();
   delay(500);
 
+  bleSetConnectionCallback(onBleConnection);
   enterTestMode();
   bleInit();
 
@@ -278,7 +287,6 @@ void loop() {
   if (gMode == MODE_TEST) testModeTick();
   else                     simModeTick();
 
-  servoTick();
   bleEnsureAdvertising();
 
   delay(5);

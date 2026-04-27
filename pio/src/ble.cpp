@@ -16,6 +16,7 @@ static String sRxAssembleBuffer;
 static ClockTimer sAdvRetryTimer;
 static bool sAdvRetryArmed = false;
 
+static BleConnectionCB sConnectionCB;
 static void appendRxChunk(const String& chunk);
 static void restartAdvertising();
 
@@ -24,6 +25,7 @@ class ServerCB : public BLEServerCallbacks {
     sConnected = true;
     sAdvRetryArmed = false;
     Serial.println("[BLE] connected");
+    if (sConnectionCB) sConnectionCB(true);
   }
   void onDisconnect(BLEServer* s) override {
     sConnected = false;
@@ -32,6 +34,7 @@ class ServerCB : public BLEServerCallbacks {
     BLEDevice::startAdvertising();
     sAdvRetryArmed = true;
     sAdvRetryTimer.start();
+    if (sConnectionCB) sConnectionCB(false);
   }
 };
 
@@ -132,6 +135,8 @@ void bleSendMessage(const String& msg) {
   sChar->notify();
   Serial.printf("[BLE TX] %s\n", msg.c_str());
 }
+
+void bleSetConnectionCallback(BleConnectionCB cb) { sConnectionCB = cb; }
 
 bool bleIsConnected() { return sConnected; }
 
