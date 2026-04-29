@@ -1,3 +1,7 @@
+// AI-ASSISTED
+// Matt Krueger
+// April 2026
+
 #pragma once
 
 #ifndef POOLANTIR_NODE_ID

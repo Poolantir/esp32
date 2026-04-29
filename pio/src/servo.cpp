@@ -1,3 +1,7 @@
+// AI-ASSISTED
+// Matt Krueger
+// April 2026
+
 #include "servo.h"
 #include "config.h"
 #include <ESP32Servo.h>

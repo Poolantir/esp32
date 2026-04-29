@@ -1,3 +1,7 @@
+// AI-ASSISTED
+// Matt Krueger
+// April 2026
+
 #include "sim_mode.h"
 #include "config.h"
 #include "servo.h"

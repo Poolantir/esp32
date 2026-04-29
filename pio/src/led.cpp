@@ -1,3 +1,7 @@
+// AI-ASSISTED
+// Matt Krueger
+// April 2026
+
 #include "led.h"
 #include "config.h"
 

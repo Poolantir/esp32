@@ -1,3 +1,7 @@
+# AI-ASSISTED
+# Matt Krueger
+# April 2026
+
 #!/usr/bin/env python3
 """Flash poolantir firmware; pass --id to set the BLE device suffix (stored in NVS on boot).
 

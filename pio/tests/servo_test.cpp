@@ -1,3 +1,6 @@
+// Matt Krueger
+// April 2026
+
 #include <Arduino.h>
 #include <ESP32Servo.h>
 #include "clock.h"
@@ -12,9 +15,6 @@
 
 Servo servo;
 
-//////////////////////////
-//    INITIALIZATION    //
-//////////////////////////
 void initServo() {
   servo.attach(PIN_SERVO);
 }
@@ -34,24 +34,18 @@ void setup() {
   initServo();
 }
 
-//////////////////////////
-//        LOOP          //
-//////////////////////////
 void loop() {
   static bool startedTimedTask = false;
   static bool timedTaskDone = false;
   static ClockTimer timedTimer;
 
-  // start the timer
   if (!startedTimedTask) {
     timedTimer.start();
     startedTimedTask = true;
     Serial.println("[Clock] Servo timed task: running for 10s");
   }
 
-  // first task
   if (!timedTaskDone) {
-    // Example timed work: sweep between 0 and 90 degrees for ~10 seconds.
     servo.write(0);
     delay(500);
     servo.write(90);
@@ -62,7 +56,6 @@ void loop() {
     delay(500);
 
 
-    // check if the timer has expired
     if (timedTimer.expired(10000)) {
       timedTaskDone = true;
       servo.write(0);
@@ -71,17 +64,14 @@ void loop() {
     }
   }
 
-  // reset and new test
   Serial.println("[Clock] Servo timed task: new test");
   timedTimer.reset();
   delay(1000);
   timedTimer.start();
 
-  // loop to move the servo 1 degree every 44ms
-  // 4s --> 4000ms 
   while (!timedTaskDone) {
     servo.write(1);
-    delay(44); // delay 44ms 
+    delay(44);
     if (timedTimer.expired(4000)) {
       servo.write(0);
       timedTimer.reset();

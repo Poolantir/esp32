@@ -1,3 +1,7 @@
+// AI-ASSISTED
+// Matt Krueger
+// April 2026
+
 #include "ble.h"
 #include "config.h"
 #include "clock.h"
